@@ -2,106 +2,159 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XROT95 Ultimate Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>XROT95 Command</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#0b0e14">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root { --bg: #0a0a0a; --panel: #111; --accent: #18f0ff; --danger: #ff3256; --warn: #f5cb42; --fg: #f1f1f1; --border: #333; --radius: 8px; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--fg); font-family:sans-serif; display:flex; flex-direction:column; min-height:100vh; }
-    header { background:#000; border-bottom:1px solid var(--border); padding:15px; display:flex; justify-content:space-between; align-items:center; }
-    h1 { font-size:1.1rem; color:var(--accent); margin:0; text-transform:uppercase; letter-spacing:1px; }
-    #status { font-size:0.8rem; color:var(--warn); display:none; }
-    main { flex:1; padding:20px; display:flex; flex-direction:column; align-items:center; }
-    
-    /* Grid */
-    #machineSelector { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:20px; width:100%; max-width:1200px; }
-    .card { background:var(--panel); border:1px solid var(--border); padding:20px; border-radius:var(--radius); text-align:center; cursor:pointer; transition:0.2s; }
-    .card:active { transform:scale(0.98); border-color:var(--accent); }
-    .badge { background:var(--accent); color:#000; padding:2px 6px; font-size:0.7rem; border-radius:4px; text-transform:uppercase; margin-left:5px; }
+    /* === MODERN CYBER UI === */
+    :root {
+      --bg: #0b0e14;
+      --panel: rgba(30, 35, 45, 0.6);
+      --glass: rgba(255, 255, 255, 0.03);
+      --border: 1px solid rgba(255, 255, 255, 0.08);
+      --accent: #00f0ff; /* Cyber Blue */
+      --barbieri: #ff3333; /* Red */
+      --warn: #ffcc00;
+      --ok: #00ff99;
+      --text: #e0e6ed;
+      --text-dim: #94a3b8;
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui);
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+      background-image: radial-gradient(circle at 50% 0%, #1a202c 0%, #0b0e14 70%);
+    }
 
-    /* Module View */
-    #moduleShell { display:none; width:100%; max-width:1200px; }
-    #moduleHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px; }
-    button { background:var(--accent); color:#000; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; }
+    /* HEADER */
+    header {
+      padding: 15px 20px; background: rgba(11, 14, 20, 0.9); backdrop-filter: blur(10px);
+      border-bottom: var(--border); display: flex; justify-content: space-between; align-items: center;
+      z-index: 100;
+    }
+    .brand { font-weight: 800; font-size: 1.1rem; letter-spacing: 1px; color: #fff; text-transform: uppercase; }
+    .brand span { color: var(--accent); }
+
+    /* MAIN AREA */
+    main { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
+
+    /* CARDS */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; }
+    .card {
+      background: var(--panel); border: var(--border); border-radius: 16px; padding: 20px;
+      backdrop-filter: blur(12px); transition: 0.3s; position: relative; overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center;
+    }
+    .card:active { transform: scale(0.98); border-color: var(--accent); }
+    .card h3 { margin: 10px 0 5px; font-size: 0.9rem; color: #fff; }
+    .card .icon { font-size: 2rem; margin-bottom: 10px; color: var(--text-dim); }
     
-    /* Error Box */
-    .error-box { color: var(--danger); background: rgba(255,50,86,0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; margin-top: 20px; }
+    /* BADGES */
+    .badge {
+      position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000;
+      font-size: 0.6rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;
+    }
+
+    /* MODULE SHELL */
+    #moduleShell { display: none; height: 100%; display: flex; flex-direction: column; }
+    #moduleContainer { flex: 1; overflow-y: auto; }
+    
+    /* BACK BUTTON */
+    .back-nav {
+      padding: 15px; border-bottom: var(--border); background: var(--bg);
+      display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-dim);
+    }
+    .back-nav:hover { color: #fff; }
+
+    /* UTILS */
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 10px 20px; border-radius: 50px;
+      font-size: 0.8rem; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
   </style>
 </head>
 <body>
+  
   <header>
-    <h1>🔧 XROT95 Ultimate</h1>
-    <div id="status">OFFLINE</div>
+    <div class="brand">XROT<span>95</span> CMD</div>
+    <div id="status" style="font-size:0.7rem; color:var(--text-dim);">ONLINE</div>
   </header>
 
   <main>
-    <section id="machineSelector"></section>
-    <section id="moduleShell">
-      <div id="moduleHeader">
-        <h2 id="modTitle" style="margin:0; font-size:1.2rem;"></h2>
-        <button onclick="closeModule()">← Zpět</button>
+    <div id="selector">
+      <h2 style="font-size:0.9rem; color:var(--text-dim); margin-bottom:15px; text-transform:uppercase;">Vyberte jednotku</h2>
+      <div class="grid" id="machineGrid"></div>
+    </div>
+
+    <div id="moduleShell" class="hidden">
+      <div class="back-nav" onclick="closeModule()">
+        <i class="fa-solid fa-arrow-left"></i> Zpět na přehled
       </div>
-      <div id="moduleContent"></div>
-    </section>
+      <div id="moduleContainer"></div>
+    </div>
   </main>
 
+  <div id="toast" class="toast"></div>
+
   <script>
+    // KONFIGURACE STROJŮ
     const MACHINES = [
-      { id:"XROT95", name:"Barbieri XROT 95 EVO", type:"auto", badge:"Autonomy" },
-      { id:"AS940", name:"AS 940 Sherpa RC", type:"manual" },
-      { id:"XCUT80", name:"Barbieri XCUT 80", type:"manual" }
+      { id:"XROT95", name:"Barbieri XROT 95 EVO", type:"auto", icon:"fa-robot", badge:"PRO" },
+      { id:"AS940", name:"AS 940 Sherpa RC", type:"manual", icon:"fa-truck-monster" },
+      { id:"XCUT80", name:"Barbieri XCUT 80", type:"manual", icon:"fa-tractor" }
     ];
 
-    // 1. Render Menu
-    const grid = document.getElementById('machineSelector');
+    // RENDER MENU
+    const grid = document.getElementById('machineGrid');
     MACHINES.forEach(m => {
       grid.innerHTML += `
-        <div class="card" onclick="loadMachine('${m.id}', '${m.type}', '${m.name}')">
-          <h3>${m.name} ${m.badge ? `<span class="badge">${m.badge}</span>` : ''}</h3>
+        <div class="card" onclick="loadMachine('${m.id}', '${m.type}')">
+          ${m.badge ? `<span class="badge">${m.badge}</span>` : ''}
+          <div class="icon"><i class="fa-solid ${m.icon}"></i></div>
+          <h3>${m.name}</h3>
         </div>`;
     });
 
-    // 2. Load Logic
-    async function loadMachine(id, type, name) {
-      document.getElementById('machineSelector').style.display = 'none';
-      document.getElementById('moduleShell').style.display = 'block';
-      document.getElementById('modTitle').innerText = name;
-      const container = document.getElementById('moduleContent');
-      container.innerHTML = '<div style="text-align:center; color:#888;">Načítání modulu...</div>';
+    // LOAD LOGIC
+    async function loadMachine(id, type) {
+      document.getElementById('selector').classList.add('hidden');
+      document.getElementById('moduleShell').classList.remove('hidden');
+      const container = document.getElementById('moduleContainer');
+      container.innerHTML = '<div style="text-align:center; padding:50px; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Načítání modulu...</div>';
 
       const file = type === 'auto' ? './modules-xrot-autonomy.js' : './modules-servicebook.js';
 
       try {
-        const module = await import(file);
-        if (module && typeof module.init === 'function') {
-          await module.init(id, container, alert);
-        } else {
-          throw new Error(`Modul "${file}" nemá funkci export function init()`);
-        }
-      } catch (err) {
-        console.error(err);
-        container.innerHTML = `
-          <div class="error-box">
-            <strong>❌ CHYBA NAČÍTÁNÍ:</strong><br><br>
-            ${err.message}<br><br>
-            <small>Zkontrolujte, zda soubor <b>${file}</b> existuje na GitHubu a zda neobsahuje chyby v kódu.</small>
-          </div>
-        `;
+        const mod = await import(file + '?v=' + Date.now()); // Cache buster
+        if (mod.init) await mod.init(id, container, showToast);
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = `<div style="padding:20px; color:var(--barbieri); text-align:center;">
+          <i class="fa-solid fa-triangle-exclamation fa-2x"></i><br>Chyba modulu.<br><small>${e.message}</small>
+        </div>`;
       }
     }
 
     function closeModule() {
-      document.getElementById('moduleShell').style.display = 'none';
-      document.getElementById('machineSelector').style.display = 'grid';
-      document.getElementById('moduleContent').innerHTML = '';
+      document.getElementById('moduleShell').classList.add('hidden');
+      document.getElementById('selector').classList.remove('hidden');
+      document.getElementById('moduleContainer').innerHTML = '';
     }
 
-    // SW Register
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').then(() => console.log('SW OK'));
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
     }
+
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
   </script>
 </body>
 </html>

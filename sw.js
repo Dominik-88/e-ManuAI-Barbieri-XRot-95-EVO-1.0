@@ -1,9 +1,9 @@
 /* ============================================================
    XROT95 ULTIMATE MANUAL — SERVICE WORKER
-   Verze: 2.0 (Cache Buster)
+   Verze: 3.0 (Fix Loading Error)
 ============================================================ */
 
-const CACHE_NAME = 'xrot95-cache-v2'; // Změna verze vynutí přenačtení
+const CACHE_NAME = 'xrot95-cache-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,7 @@ const CORE_ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Okamžitá aktivace nového SW
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(CORE_ASSETS))
@@ -27,11 +27,10 @@ self.addEventListener('activate', event => {
       keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
     ))
   );
-  self.clients.claim(); // Převezme kontrolu nad stránkou ihned
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-  // Strategie: Network First (pro vývoj), fallback to Cache
   event.respondWith(
     fetch(event.request)
       .then(resp => {

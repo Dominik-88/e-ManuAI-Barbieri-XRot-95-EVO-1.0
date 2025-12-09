@@ -1,224 +1,151 @@
 /* ============================================================
-   XROT95 ULTIMATE MANUAL — MODULE: AUTONOMY CORE
-   Autor: Barbieri Systems 2025
-   Verze: 3.1 (Clean & Fix)
+   XROT95 AUTONOMY CORE 3.0
+   Design: Cyber Industrial | Data: Connected to DB
 ============================================================ */
-
 import { db } from './db.js';
 
-// --- STAV A PROMĚNNÉ ---
-let telemetryInterval = null;
-let chartInstance = null;
-let mapInstance = null;
+let currentId = null;
+let refreshInterval = null;
 
-/* ============================================================
-   HLAVNÍ EXPORT (INIT)
-============================================================ */
-export async function init(machineId, container, toastFn) {
-  // 1. Render Základního Layoutu
+export async function init(id, container) {
+  currentId = id;
+  
+  // 1. Základní Layout
   container.innerHTML = `
-    <div style="height: 100%; display: flex; flex-direction: column;">
-      
-      <div style="background:#111; border-bottom:1px solid #333; padding:15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="margin:0; font-size:1.1rem; color:#18f0ff;">🤖 Autonomy Core</h2>
-          <span style="font-family:monospace; font-size:0.8rem; color:#666;">FW: v1.9.6.6</span>
+    <div class="xrot-ui">
+      <div class="dash-header">
+        <div>
+          <h2 style="margin:0; color:#fff;">X-ROT 95 EVO</h2>
+          <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">
+            <i class="fa-solid fa-circle" style="color:var(--ok); font-size:0.6rem;"></i> Connected (LTE)
+          </div>
         </div>
-        
-        <div style="display:flex; gap:10px; margin-top:15px; overflow-x:auto;">
-          <button class="tab-btn active" onclick="window.switchTab('Overview')">Přehled</button>
-          <button class="tab-btn" onclick="window.switchTab('Telemetry')">Data</button>
-          <button class="tab-btn" onclick="window.switchTab('Compass')">Compass</button>
-          <button class="tab-btn" onclick="window.switchTab('RTK')">RTK</button>
+        <div style="text-align:right;">
+          <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);">1,245.5 <span style="font-size:0.7rem;">MTH</span></div>
         </div>
       </div>
 
-      <div id="tab-content" style="flex:1; overflow-y:auto; padding:15px;"></div>
+      <div class="tabs">
+        <button class="t-btn active" onclick="window.setTab('Dash')"><i class="fa-solid fa-gauge"></i> Přehled</button>
+        <button class="t-btn" onclick="window.setTab('Data')"><i class="fa-solid fa-chart-line"></i> Data</button>
+        <button class="t-btn" onclick="window.setTab('GPS')"><i class="fa-solid fa-map-location"></i> GPS</button>
+        <button class="t-btn" onclick="window.setTab('Tech')"><i class="fa-solid fa-book"></i> Manuál</button>
+      </div>
+
+      <div id="x-content"></div>
     </div>
-    
+
     <style>
-      .tab-btn { flex:1; background:#222; color:#fff; border:none; padding:10px; border-radius:4px; font-size:0.9rem; min-width:80px; }
-      .tab-btn.active { background:#18f0ff; color:#000; font-weight:bold; }
+      .xrot-ui { display: flex; flex-direction: column; height: 100%; }
+      .dash-header { padding: 20px; background: linear-gradient(180deg, rgba(0,240,255,0.05) 0%, transparent 100%); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .tabs { display: flex; padding: 10px 15px; gap: 10px; overflow-x: auto; background: rgba(0,0,0,0.3); }
+      .t-btn { flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; }
+      .t-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); box-shadow: 0 0 15px rgba(0,240,255,0.3); }
+      #x-content { padding: 20px; flex: 1; overflow-y: auto; }
+      
+      /* WIDGETS */
+      .widget { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+      .w-title { font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; letter-spacing: 1px; }
+      .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .stat-row:last-child { border: none; }
+      
+      .health-ok { color: var(--ok); font-weight: bold; }
+      .health-warn { color: var(--warn); font-weight: bold; }
     </style>
   `;
 
-  // 2. Definice globální funkce pro přepínání (aby fungovala v HTML onclick)
-  window.switchTab = (tab) => {
-    const content = document.getElementById('tab-content');
-    
-    // Zastavit staré procesy
-    if(telemetryInterval) clearInterval(telemetryInterval);
-    
-    // Aktualizace tlačítek
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        const isActive = b.innerText.includes(tab === 'Telemetry' ? 'Data' : (tab === 'Overview' ? 'Přehled' : tab));
-        b.className = isActive ? 'tab-btn active' : 'tab-btn';
+  // 2. Tab Logic
+  window.setTab = (tab) => {
+    document.querySelectorAll('.t-btn').forEach(b => {
+      b.classList.toggle('active', b.innerText.includes(tab === 'Dash' ? 'Přehled' : tab));
     });
-
-    // Vykreslení obsahu
-    if (tab === 'Overview') content.innerHTML = renderOverview();
-    if (tab === 'Telemetry') renderTelemetry(content);
-    if (tab === 'Compass') content.innerHTML = renderCompass();
-    if (tab === 'RTK') content.innerHTML = renderRTK();
+    
+    const c = document.getElementById('x-content');
+    if (tab === 'Dash') renderDashboard(c);
+    else if (tab === 'Data') c.innerHTML = '<div class="widget"><h3 class="w-title">Live Telemetrie</h3><p>Simulace grafů...</p></div>';
+    else if (tab === 'GPS') c.innerHTML = '<div class="widget"><h3 class="w-title">RTK Status</h3><p>Připojeno k CZEPOS</p></div>';
+    else if (tab === 'Tech') c.innerHTML = '<div class="widget"><h3 class="w-title">Manuál</h3><p>Technická specifikace...</p></div>';
   };
 
-  // 3. Spustit první záložku
-  window.switchTab('Overview');
-  if(toastFn) toastFn("Autonomy Core Načteno");
+  // 3. Load Data & Render Dash
+  window.setTab('Dash');
 }
 
-/* ============================================================
-   HTML ŠABLONY (RENDERY)
-============================================================ */
-
-function renderOverview() {
-  return `
-    <div style="background:#111; padding:15px; border-radius:8px; border:1px solid #333;">
-      <h3 style="margin-top:0; color:#fff;">🖥️ System Info (R54)</h3>
-      <ul style="color:#ccc; line-height:1.8; list-style:none; padding:0;">
-        <li><b>Model:</b> X-ROT 95 EVO</li>
-        <li><b>Jednotka:</b> Compass Servo Drive 2.0</li>
-        <li><b>GNSS:</b> u-blox ZED-F9P</li>
-        <li><b>Status:</b> <span style="color:#3cff8d">SYSTEM READY</span></li>
-      </ul>
-      <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <div style="background:#222; padding:10px; border-radius:4px; text-align:center;">Temp: 45°C</div>
-        <div style="background:#222; padding:10px; border-radius:4px; text-align:center;">Bat: 50.2V</div>
-      </div>
-    </div>
-  `;
-}
-
-function renderTelemetry(container) {
-  container.innerHTML = `
-    <h3 style="margin-top:0;">📉 Live Telemetrie</h3>
-    <div style="margin-bottom:20px; display:flex; gap:10px;">
-      <button onclick="window.toggleSim(true)" style="flex:1; background:#3cff8d; border:none; padding:12px; border-radius:4px; font-weight:bold;">▶ Start</button>
-      <button onclick="window.toggleSim(false)" style="flex:1; background:#ff3256; color:#fff; border:none; padding:12px; border-radius:4px; font-weight:bold;">⏹ Stop</button>
-    </div>
-    
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-      <div style="background:#1a1a1a; padding:15px; text-align:center; border-radius:8px;">
-        <div style="color:#888; font-size:0.8rem;">PITCH (Sklon)</div>
-        <div id="val-pitch" style="font-size:2rem; font-weight:bold; color:#fff;">0°</div>
-      </div>
-      <div style="background:#1a1a1a; padding:15px; text-align:center; border-radius:8px;">
-        <div style="color:#888; font-size:0.8rem;">ROLL (Náklon)</div>
-        <div id="val-roll" style="font-size:2rem; font-weight:bold; color:#fff;">0°</div>
-      </div>
-    </div>
-
-    <div style="height:250px; background:#000; border-radius:8px; position:relative;">
-        <canvas id="tm-chart"></canvas>
-    </div>
-  `;
+async function renderDashboard(container) {
+  // Fetch data from DB
+  const logs = await db.getServicesByMachine(currentId, { limit: 1 });
+  const lastService = logs.length > 0 ? logs[0] : null;
   
-  // Spustit graf po vykreslení HTML
-  setTimeout(initChart, 100);
-}
+  // Calculate maintenance logic
+  const currentMth = 1245.5;
+  const nextServiceMth = Math.ceil(currentMth / 50) * 50; // Interval 50h
+  const hoursLeft = (nextServiceMth - currentMth).toFixed(1);
+  const statusColor = hoursLeft < 10 ? 'var(--warn)' : 'var(--ok)';
 
-function renderCompass() {
-  return `
-    <h3 style="margin-top:0;">🧭 Compass Drive</h3>
-    <div style="background:#111; padding:20px; border-radius:8px;">
-      <label style="display:block; margin-bottom:15px; color:#ccc;">Režim Autonomie:
-        <select style="width:100%; padding:12px; margin-top:8px; background:#222; color:#fff; border:1px solid #444; border-radius:4px; font-size:1rem;">
-          <option>MODE 1: Přímý směr</option>
-          <option>MODE 2: Křivka</option>
-          <option>MODE 3: Perimetr</option>
-          <option>S-MODE 4: Offset</option>
-          <option>S-MODE 5: Komplexní</option>
-        </select>
-      </label>
-      <div style="padding:15px; background:rgba(24, 240, 255, 0.1); border-left:3px solid #18f0ff; font-size:0.9rem; color:#fff;">
-        ℹ️ Pro aktivaci stiskněte tlačítko <b>SHIFT</b> na ovladači po dobu 2 sekund.
+  container.innerHTML = `
+    <div class="widget" style="border-left: 4px solid ${statusColor};">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="w-title">Údržba (Servis za)</div>
+          <div style="font-size:1.8rem; font-weight:bold; color:${statusColor};">${hoursLeft} <span style="font-size:1rem;">h</span></div>
+        </div>
+        <i class="fa-solid fa-wrench" style="font-size:2rem; color:rgba(255,255,255,0.1);"></i>
+      </div>
+      <div style="margin-top:10px; font-size:0.8rem; color:#888;">
+        Příští interval: <b>${nextServiceMth} Mth</b> (Výměna oleje)
+      </div>
+    </div>
+
+    <div class="widget">
+      <div class="w-title">Poslední Servisní Záznam</div>
+      ${lastService ? `
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+          <b style="color:#fff;">${lastService.type}</b>
+          <span style="color:#888;">${new Date(lastService.date).toLocaleDateString()}</span>
+        </div>
+        <div style="font-size:0.85rem; color:#ccc;">${lastService.desc}</div>
+        <div style="font-size:0.8rem; color:var(--accent); margin-top:5px;">${lastService.mth} Mth</div>
+      ` : '<div style="color:#666; font-style:italic;">Zatím žádný záznam.</div>'}
+      
+      <button onclick="window.addQuickLog()" style="width:100%; margin-top:15px; padding:10px; background:rgba(255,255,255,0.1); border:1px solid #444; color:#fff; border-radius:6px; cursor:pointer;">
+        <i class="fa-solid fa-plus"></i> Zapsat Rychlý Servis
+      </button>
+    </div>
+
+    <div class="widget">
+      <div class="w-title">Diagnostika (Live)</div>
+      <div class="stat-row">
+        <span>Teplota Motoru</span>
+        <span class="health-ok">85°C</span>
+      </div>
+      <div class="stat-row">
+        <span>Baterie (Pojezd)</span>
+        <span class="health-ok">50.2V</span>
+      </div>
+      <div class="stat-row">
+        <span>Tlak Oleje</span>
+        <span class="health-ok">OK</span>
+      </div>
+      <div class="stat-row">
+        <span>RTK Signál</span>
+        <span class="health-warn">FLOAT (30cm)</span>
       </div>
     </div>
   `;
-}
 
-function renderRTK() {
-  return `
-    <h3 style="margin-top:0;">📡 RTK (CZEPOS)</h3>
-    <div style="background:#111; padding:15px; border-radius:8px;">
-      <p style="margin:5px 0; color:#ccc;">Host: <b style="color:#fff;">rtk.cuzk.cz</b></p>
-      <p style="margin:5px 0; color:#ccc;">Port: <b style="color:#fff;">2101</b></p>
-      <p style="margin:5px 0; color:#ccc;">Mount: <b style="color:#fff;">MAX3</b></p>
-      <button style="width:100%; padding:15px; margin-top:15px; background:#18f0ff; border:none; font-weight:bold; border-radius:4px;">🔌 PŘIPOJIT</button>
-    </div>
-    <div id="rtk-map" style="height:300px; background:#222; margin-top:15px; border-radius:8px;"></div>
-  `;
-}
-
-/* ============================================================
-   LOGIKA GRAFU A SIMULACE
-============================================================ */
-async function initChart() {
-  const ctx = document.getElementById('tm-chart');
-  if(!ctx) return;
-
-  try {
-    // Dynamický import Chart.js
-    const { Chart } = await import('https://cdn.jsdelivr.net/npm/chart.js@auto/+esm');
-    
-    chartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Sklon (°)',
-          data: [],
-          borderColor: '#ff3256',
-          borderWidth: 2,
-          pointRadius: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: { y: { min: -60, max: 60, grid: { color: '#333' } }, x: { display: false } },
-        plugins: { legend: { labels: { color: '#fff' } } }
-      }
-    });
-
-    // Simulace dat
-    window.toggleSim = (state) => {
-      if(state) {
-        if(telemetryInterval) return;
-        telemetryInterval = setInterval(() => {
-          const pitch = (Math.random() * 10) - 5;
-          const roll = (Math.random() * 6) - 3;
-          
-          const elP = document.getElementById('val-pitch');
-          const elR = document.getElementById('val-roll');
-          
-          if(elP) {
-            elP.innerText = pitch.toFixed(1) + '°';
-            elP.style.color = Math.abs(pitch) > 45 ? '#ff3256' : '#fff';
-          }
-          if(elR) {
-            elR.innerText = roll.toFixed(1) + '°';
-          }
-          
-          if(chartInstance) {
-            chartInstance.data.labels.push('');
-            chartInstance.data.datasets[0].data.push(pitch);
-            if(chartInstance.data.labels.length > 30) {
-              chartInstance.data.labels.shift();
-              chartInstance.data.datasets[0].data.shift();
-            }
-            chartInstance.update();
-          }
-        }, 500);
-      } else {
-        clearInterval(telemetryInterval);
-        telemetryInterval = null;
-      }
-    };
-
-  } catch(e) {
-    console.error(e);
-    ctx.parentElement.innerHTML = '<p style="color:red; text-align:center; padding-top:50px;">Chyba načítání grafu (zkontrolujte internet).</p>';
-  }
+  // Quick Action Logic
+  window.addQuickLog = async () => {
+    const note = prompt("Popis servisu:", "Běžná kontrola");
+    if(note) {
+      await db.addService({
+        machineId: currentId,
+        date: new Date().toISOString(),
+        mth: currentMth,
+        type: "Rychlý Záznam",
+        desc: note,
+        cost: 0
+      });
+      renderDashboard(container); // Refresh
+    }
+  };
 }

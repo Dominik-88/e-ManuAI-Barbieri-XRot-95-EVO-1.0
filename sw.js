@@ -1,9 +1,9 @@
 /* ============================================================
    XROT95 ULTIMATE MANUAL — SERVICE WORKER
-   Verze: 3.0 (Fix Loading Error)
+   Verze: 4.0 (Force Reload Fix)
 ============================================================ */
 
-const CACHE_NAME = 'xrot95-cache-v3';
+const CACHE_NAME = 'xrot95-cache-v4';
 const CORE_ASSETS = [
   './',
   './index.html',

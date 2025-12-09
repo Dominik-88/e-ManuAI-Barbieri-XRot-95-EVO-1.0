@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XROT95 Ultimate Manual</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0ff">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0a">
+  <style>
+    /* === Industrial Cyber-Futurism Theme === */
+    :root {
+      --bg: #0a0a0a;
+      --panel: #111;
+      --accent: #18f0ff;
+      --danger: #ff3256;
+      --warn: #f5cb42;
+      --ok: #3cff8d;
+      --fg: #f1f1f1;
+      --border: #333;
+      --radius: 8px;
+      --transition: 0.25s ease;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family:"Segoe UI",Roboto,Arial,sans-serif;
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+    header {
+      background:#000;
+      border-bottom:1px solid var(--border);
+      padding:10px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      position:sticky;
+      top:0;
+      z-index:100;
+    }
+    header h1 {
+      font-size:1.1rem;
+      color:var(--accent);
+      letter-spacing:1px;
+      text-transform:uppercase;
+      margin:0;
+    }
+    #offlineStatus {
+      font-size:0.8rem;
+      color:var(--warn);
+      opacity:0;
+      transition:opacity var(--transition);
+    }
+    #offlineStatus.active { opacity:1; }
+
+    main {
+      flex:1;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+    }
+
+    /* === Machine Selector Grid === */
+    #machineSelector {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+      gap:20px;
+      width:100%;
+      max-width:1200px;
+      margin-top:20px;
+    }
+    .machine-tile {
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:20px;
+      text-align:center;
+      cursor:pointer;
+      transition:transform var(--transition),border-color var(--transition);
+    }
+    .machine-tile:hover {
+      border-color:var(--accent);
+      transform:translateY(-3px);
+    }
+    .machine-tile h2 { margin:10px 0 5px; font-size:1rem; }
+    .machine-tile .badge {
+      background:var(--accent);
+      color:#000;
+      padding:2px 6px;
+      font-size:0.7rem;
+      border-radius:4px;
+      text-transform:uppercase;
+    }
+
+    /* === Module Shell === */
+    #moduleShell {
+      display:none;
+      width:100%;
+      max-width:1200px;
+      animation:fadeIn 0.4s ease;
+    }
+    #moduleHeader {
+      position:sticky;
+      top:60px;
+      background:#080808;
+      border-bottom:1px solid var(--border);
+      padding:10px;
+      z-index:50;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    #moduleContent {
+      padding:20px;
+      background:var(--panel);
+      border-radius:var(--radius);
+      margin-top:10px;
+      min-height:400px;
+    }
+
+    button {
+      background:var(--accent);
+      color:#000;
+      border:none;
+      border-radius:var(--radius);
+      padding:8px 14px;
+      font-weight:bold;
+      cursor:pointer;
+      transition:background var(--transition),transform var(--transition);
+    }
+    button:hover { background:#0ff; transform:translateY(-1px); }
+    button:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* === Toasts === */
+    #toastContainer {
+      position:fixed;
+      bottom:15px; right:15px;
+      display:flex; flex-direction:column; gap:8px;
+      z-index:2000;
+    }
+    .toast {
+      background:rgba(0,0,0,0.85);
+      border-left:4px solid var(--accent);
+      color:var(--fg);
+      padding:10px 14px;
+      border-radius:4px;
+      font-size:0.85rem;
+      opacity:0;
+      transform:translateY(20px);
+      animation:toastIn 0.3s forwards;
+    }
+    @keyframes toastIn {
+      to { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeIn { from {opacity:0} to {opacity:1} }
+
+    footer {
+      text-align:center;
+      font-size:0.75rem;
+      color:#666;
+      padding:10px 0 20px;
+    }
+
+    @media(max-width:600px){
+      header h1 { font-size:0.9rem; }
+      .machine-tile { padding:15px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔧 XROT95 Ultimate Manual</h1>
+    <div id="offlineStatus">Offline režim</div>
+  </header>
+
+  <main>
+    <!-- === Machine Selector === -->
+    <section id="machineSelector" aria-label="Výběr stroje"></section>
+
+    <!-- === Module Shell === -->
+    <section id="moduleShell">
+      <div id="moduleHeader">
+        <span id="moduleTitle">—</span>
+        <div>
+          <button id="btnBack">← Zpět</button>
+        </div>
+      </div>
+      <div id="moduleContent" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>XROT Systems © 2025 | Industrial Cyber Futurism UI</p>
+  </footer>
+
+  <div id="toastContainer" aria-live="polite"></div>
+
+  <script>
+  /* ============================================================
+     CORE INITIALIZATION — SPA CONTROLLER
+  ============================================================ */
+  const machines = [
+    { id:"XROT95", name:"Barbieri XROT 95 EVO", type:"autonomous", badge:"Autonomy" },
+    { id:"AS940-RC", name:"AS 940 Sherpa 4WD RC", type:"simple" },
+    { id:"AS940-XL", name:"AS 940 Sherpa 4WD XL", type:"simple" },
+    { id:"XCUT80", name:"Barbieri XCUT 80", type:"simple" },
+    { id:"AS1000", name:"AS 1000 Ovis RC", type:"simple" },
+    { id:"HUSQ-Z560X", name:"Husqvarna Z560X", type:"simple" }
+  ];
+
+  const qs = s => document.querySelector(s);
+  const selectorEl = qs("#machineSelector");
+  const shellEl = qs("#moduleShell");
+  const titleEl = qs("#moduleTitle");
+  const contentEl = qs("#moduleContent");
+
+  function showToast(msg, color="var(--accent)") {
+    const cont = qs("#toastContainer");
+    const t = document.createElement("div");
+    t.className="toast";
+    t.style.borderColor=color;
+    t.textContent=msg;
+    cont.appendChild(t);
+    setTimeout(()=>{t.style.opacity="0";},4000);
+    setTimeout(()=>t.remove(),5000);
+  }
+
+  function renderMachineSelector(){
+    selectorEl.innerHTML="";
+    machines.forEach(m=>{
+      const div=document.createElement("div");
+      div.className="machine-tile";
+      div.dataset.id=m.id;
+      div.innerHTML=`<h2>${m.name}</h2>${m.badge?`<span class='badge'>${m.badge}</span>`:""}`;
+      div.onclick=()=>openMachine(m);
+      selectorEl.appendChild(div);
+    });
+  }
+
+  function openMachine(machine){
+    selectorEl.style.display="none";
+    shellEl.style.display="block";
+    titleEl.textContent=machine.name;
+    showToast(`Otevřen ${machine.name}`);
+    if(machine.type==="autonomous"){
+      lazyLoadModule("modules-xrot-autonomy.js","XROT95",contentEl);
+    } else {
+      lazyLoadModule("modules-servicebook.js",machine.id,contentEl);
+    }
+  }
+
+  qs("#btnBack").onclick=()=>{
+    shellEl.style.display="none";
+    selectorEl.style.display="grid";
+    contentEl.innerHTML="";
+  };
+
+  async function lazyLoadModule(path,machineId,container){
+    showToast("Načítání modulu …");
+    try {
+      const mod = await import(`./${path}`);
+      if(mod && typeof mod.init==="function") mod.init(machineId,container,showToast);
+      else container.textContent="❌ Nepodařilo se načíst modul.";
+    } catch(e){
+      console.error(e);
+      container.textContent="Chyba načítání modulu.";
+    }
+  }
+
+  /* ============================================================
+     OFFLINE / PWA / EVENTS
+  ============================================================ */
+  function updateOnlineStatus(){
+    const el=qs("#offlineStatus");
+    if(navigator.onLine){ el.classList.remove("active"); }
+    else { el.classList.add("active"); showToast("Aplikace v offline režimu","var(--warn)"); }
+  }
+  window.addEventListener("online",updateOnlineStatus);
+  window.addEventListener("offline",updateOnlineStatus);
+  updateOnlineStatus();
+
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").then(()=>console.log("SW registered"));
+  }
+
+  /* ============================================================
+     STARTUP
+  ============================================================ */
+  renderMachineSelector();
+  showToast("XROT Ultimate Manual spuštěn");
+  </script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('✅ Service Worker aktivní'))
+    .catch(err => console.warn('SW Error:', err));
+}
+</script>
+</body>
+</html>

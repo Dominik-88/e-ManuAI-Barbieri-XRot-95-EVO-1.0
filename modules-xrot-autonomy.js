@@ -1,151 +1,267 @@
 /* ============================================================
-   XROT95 AUTONOMY CORE 3.0
-   Design: Cyber Industrial | Data: Connected to DB
+   BARBIERI XROT 95 EVO — CORE SYSTEM
+   Autor: Dominik Schmied
+   Verze: 4.0 (Real Data Only)
 ============================================================ */
+
 import { db } from './db.js';
 
-let currentId = null;
+let currentMth = 0.0;
 let refreshInterval = null;
 
 export async function init(id, container) {
-  currentId = id;
   
-  // 1. Základní Layout
+  // Načtení uložených MTH z DB (pokud existují)
+  try {
+    const settings = await db.getSetting('machine_mth');
+    if(settings) currentMth = parseFloat(settings.value);
+  } catch(e) { console.log("První spuštění, MTH = 0"); }
+
+  // 1. RENDER LAYOUTU
   container.innerHTML = `
-    <div class="xrot-ui">
-      <div class="dash-header">
-        <div>
-          <h2 style="margin:0; color:#fff;">X-ROT 95 EVO</h2>
-          <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">
-            <i class="fa-solid fa-circle" style="color:var(--ok); font-size:0.6rem;"></i> Connected (LTE)
+    <div class="cyber-ui">
+      
+      <div class="search-bar">
+        <i class="fa-solid fa-search"></i>
+        <input type="text" id="global-search" placeholder="Vyhledat v systému..." onkeyup="window.handleSearch(this)">
+      </div>
+
+      <div class="status-panel">
+        <div class="status-item">
+          <div class="label">PŘIPOJENÍ</div>
+          <div class="value" id="net-status" style="color:var(--danger)">DETEKCE...</div>
+        </div>
+        <div class="status-item">
+          <div class="label">GPS / RTK</div>
+          <div class="value" style="color:#555">NO SIGNAL</div>
+        </div>
+        <div class="status-item">
+          <div class="label">MOTOHODINY</div>
+          <div class="value clickable" onclick="window.editMth()" id="val-mth">${currentMth.toFixed(1)}</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3><i class="fa-solid fa-microchip"></i> LIVE DIAGNOSTIKA</h3>
+          <span class="badge-offline">OFFLINE</span>
+        </div>
+        <div class="diag-grid">
+          <div class="diag-box">
+            <span>TEPLOTA MOTORU</span>
+            <strong>---</strong>
+          </div>
+          <div class="diag-box">
+            <span>TLAK OLEJE</span>
+            <strong>---</strong>
+          </div>
+          <div class="diag-box">
+            <span>NÁKLON (X/Y)</span>
+            <strong>--- / ---</strong>
+          </div>
+          <div class="diag-box">
+            <span>NAPĚTÍ (48V)</span>
+            <strong>---</strong>
           </div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);">1,245.5 <span style="font-size:0.7rem;">MTH</span></div>
+        <div class="warning-text">
+          * Hodnoty nejsou k dispozici. Hardware není připojen.
         </div>
       </div>
 
-      <div class="tabs">
-        <button class="t-btn active" onclick="window.setTab('Dash')"><i class="fa-solid fa-gauge"></i> Přehled</button>
-        <button class="t-btn" onclick="window.setTab('Data')"><i class="fa-solid fa-chart-line"></i> Data</button>
-        <button class="t-btn" onclick="window.setTab('GPS')"><i class="fa-solid fa-map-location"></i> GPS</button>
-        <button class="t-btn" onclick="window.setTab('Tech')"><i class="fa-solid fa-book"></i> Manuál</button>
+      <div class="panel">
+        <div class="panel-head">
+          <h3><i class="fa-solid fa-wrench"></i> SERVISNÍ DENÍK</h3>
+        </div>
+        
+        <div class="quick-actions">
+          <button class="btn-cyber" onclick="window.openServiceModal()">
+            <i class="fa-solid fa-plus"></i> NOVÝ ZÁZNAM
+          </button>
+          <button class="btn-cyber-outline" onclick="window.exportData()">
+            <i class="fa-solid fa-file-export"></i> EXPORT DAT
+          </button>
+        </div>
+
+        <div id="last-service-info" style="margin-top:15px; font-size:0.9rem; color:#888;">
+          Načítání historie...
+        </div>
       </div>
 
-      <div id="x-content"></div>
+    </div>
+
+    <div id="serviceModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>ZAPSAT SERVIS</h3>
+        <form onsubmit="window.saveService(event)">
+          <label>Datum</label>
+          <input type="date" id="s-date" required class="cyber-input">
+          
+          <label>Stav MTH</label>
+          <input type="number" id="s-mth" step="0.1" required class="cyber-input">
+          
+          <label>Typ úkonu</label>
+          <select id="s-type" class="cyber-input">
+            <option value="Běžná údržba">Běžná údržba</option>
+            <option value="Oprava">Oprava</option>
+            <option value="Výměna oleje">Výměna oleje</option>
+            <option value="Kontrola">Kontrola</option>
+            <option value="Tankování">Tankování</option>
+          </select>
+
+          <label>Popis / Poznámka</label>
+          <textarea id="s-desc" rows="3" class="cyber-input" placeholder="Detaily..."></textarea>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="window.closeModal()">ZRUŠIT</button>
+            <button type="submit" class="btn-confirm">ULOŽIT</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <style>
-      .xrot-ui { display: flex; flex-direction: column; height: 100%; }
-      .dash-header { padding: 20px; background: linear-gradient(180deg, rgba(0,240,255,0.05) 0%, transparent 100%); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-      .tabs { display: flex; padding: 10px 15px; gap: 10px; overflow-x: auto; background: rgba(0,0,0,0.3); }
-      .t-btn { flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; }
-      .t-btn.active { background: var(--accent); color: #000; font-weight: bold; border-color: var(--accent); box-shadow: 0 0 15px rgba(0,240,255,0.3); }
-      #x-content { padding: 20px; flex: 1; overflow-y: auto; }
+      .cyber-ui { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
       
-      /* WIDGETS */
-      .widget { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-      .w-title { font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; letter-spacing: 1px; }
-      .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-      .stat-row:last-child { border: none; }
+      /* Search */
+      .search-bar { display: flex; align-items: center; background: #111; border: 1px solid #333; padding: 10px; border-radius: 4px; }
+      .search-bar input { background: transparent; border: none; color: #fff; width: 100%; margin-left: 10px; outline: none; font-family: var(--font-body); }
       
-      .health-ok { color: var(--ok); font-weight: bold; }
-      .health-warn { color: var(--warn); font-weight: bold; }
+      /* Status Grid */
+      .status-panel { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+      .status-item { background: var(--panel); border: var(--panel-border); padding: 10px; text-align: center; border-radius: 4px; }
+      .status-item .label { font-size: 0.6rem; color: var(--text-dim); margin-bottom: 5px; }
+      .status-item .value { font-family: var(--font-head); font-weight: 700; font-size: 1.1rem; color: #fff; }
+      .clickable { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+
+      /* Panels */
+      .panel { background: var(--panel); border: var(--panel-border); padding: 15px; border-radius: 6px; }
+      .panel-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 10px; }
+      .panel h3 { margin: 0; font-size: 1rem; color: var(--accent); font-family: var(--font-head); }
+      
+      .badge-offline { background: #222; color: #555; padding: 2px 6px; font-size: 0.7rem; border-radius: 2px; border: 1px solid #333; }
+
+      /* Real Diagnostics Grid */
+      .diag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .diag-box { background: #050505; border: 1px solid #222; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+      .diag-box span { font-size: 0.7rem; color: #777; }
+      .diag-box strong { color: #444; font-family: monospace; }
+      
+      .warning-text { font-size: 0.7rem; color: #444; margin-top: 10px; font-style: italic; }
+
+      /* Buttons */
+      .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .btn-cyber { background: var(--accent); color: #000; border: none; padding: 12px; font-weight: bold; font-family: var(--font-head); cursor: pointer; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+      .btn-cyber-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 12px; font-weight: bold; font-family: var(--font-head); cursor: pointer; }
+
+      /* Modal */
+      .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+      .hidden { display: none; }
+      .modal-content { background: #111; border: 1px solid var(--accent); padding: 20px; width: 90%; max-width: 400px; box-shadow: 0 0 30px rgba(0, 243, 255, 0.1); }
+      .modal-content h3 { color: var(--accent); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
+      
+      .cyber-input { width: 100%; background: #050505; border: 1px solid #333; color: #fff; padding: 10px; margin-bottom: 15px; margin-top: 5px; font-family: monospace; }
+      .cyber-input:focus { border-color: var(--accent); outline: none; }
+      
+      .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+      .btn-confirm { flex: 1; background: var(--accent); border: none; padding: 10px; font-weight: bold; cursor: pointer; }
+      .btn-cancel { flex: 1; background: #333; color: #fff; border: none; padding: 10px; cursor: pointer; }
     </style>
   `;
 
-  // 2. Tab Logic
-  window.setTab = (tab) => {
-    document.querySelectorAll('.t-btn').forEach(b => {
-      b.classList.toggle('active', b.innerText.includes(tab === 'Dash' ? 'Přehled' : tab));
-    });
-    
-    const c = document.getElementById('x-content');
-    if (tab === 'Dash') renderDashboard(c);
-    else if (tab === 'Data') c.innerHTML = '<div class="widget"><h3 class="w-title">Live Telemetrie</h3><p>Simulace grafů...</p></div>';
-    else if (tab === 'GPS') c.innerHTML = '<div class="widget"><h3 class="w-title">RTK Status</h3><p>Připojeno k CZEPOS</p></div>';
-    else if (tab === 'Tech') c.innerHTML = '<div class="widget"><h3 class="w-title">Manuál</h3><p>Technická specifikace...</p></div>';
-  };
-
-  // 3. Load Data & Render Dash
-  window.setTab('Dash');
+  // 2. INICIALIZACE LOGIKY (Funkce)
+  initLogic();
 }
 
-async function renderDashboard(container) {
-  // Fetch data from DB
-  const logs = await db.getServicesByMachine(currentId, { limit: 1 });
-  const lastService = logs.length > 0 ? logs[0] : null;
+function initLogic() {
   
-  // Calculate maintenance logic
-  const currentMth = 1245.5;
-  const nextServiceMth = Math.ceil(currentMth / 50) * 50; // Interval 50h
-  const hoursLeft = (nextServiceMth - currentMth).toFixed(1);
-  const statusColor = hoursLeft < 10 ? 'var(--warn)' : 'var(--ok)';
-
-  container.innerHTML = `
-    <div class="widget" style="border-left: 4px solid ${statusColor};">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div class="w-title">Údržba (Servis za)</div>
-          <div style="font-size:1.8rem; font-weight:bold; color:${statusColor};">${hoursLeft} <span style="font-size:1rem;">h</span></div>
-        </div>
-        <i class="fa-solid fa-wrench" style="font-size:2rem; color:rgba(255,255,255,0.1);"></i>
-      </div>
-      <div style="margin-top:10px; font-size:0.8rem; color:#888;">
-        Příští interval: <b>${nextServiceMth} Mth</b> (Výměna oleje)
-      </div>
-    </div>
-
-    <div class="widget">
-      <div class="w-title">Poslední Servisní Záznam</div>
-      ${lastService ? `
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-          <b style="color:#fff;">${lastService.type}</b>
-          <span style="color:#888;">${new Date(lastService.date).toLocaleDateString()}</span>
-        </div>
-        <div style="font-size:0.85rem; color:#ccc;">${lastService.desc}</div>
-        <div style="font-size:0.8rem; color:var(--accent); margin-top:5px;">${lastService.mth} Mth</div>
-      ` : '<div style="color:#666; font-style:italic;">Zatím žádný záznam.</div>'}
-      
-      <button onclick="window.addQuickLog()" style="width:100%; margin-top:15px; padding:10px; background:rgba(255,255,255,0.1); border:1px solid #444; color:#fff; border-radius:6px; cursor:pointer;">
-        <i class="fa-solid fa-plus"></i> Zapsat Rychlý Servis
-      </button>
-    </div>
-
-    <div class="widget">
-      <div class="w-title">Diagnostika (Live)</div>
-      <div class="stat-row">
-        <span>Teplota Motoru</span>
-        <span class="health-ok">85°C</span>
-      </div>
-      <div class="stat-row">
-        <span>Baterie (Pojezd)</span>
-        <span class="health-ok">50.2V</span>
-      </div>
-      <div class="stat-row">
-        <span>Tlak Oleje</span>
-        <span class="health-ok">OK</span>
-      </div>
-      <div class="stat-row">
-        <span>RTK Signál</span>
-        <span class="health-warn">FLOAT (30cm)</span>
-      </div>
-    </div>
-  `;
-
-  // Quick Action Logic
-  window.addQuickLog = async () => {
-    const note = prompt("Popis servisu:", "Běžná kontrola");
-    if(note) {
-      await db.addService({
-        machineId: currentId,
-        date: new Date().toISOString(),
-        mth: currentMth,
-        type: "Rychlý Záznam",
-        desc: note,
-        cost: 0
-      });
-      renderDashboard(container); // Refresh
+  // Kontrola připojení (Skutečná)
+  const updateOnlineStatus = () => {
+    const el = document.getElementById('net-status');
+    if(navigator.onLine) {
+      el.innerText = "LTE / ONLINE";
+      el.style.color = "var(--accent)";
+    } else {
+      el.innerText = "OFFLINE";
+      el.style.color = "var(--danger)";
     }
+  };
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+
+  // Editace MTH
+  window.editMth = async () => {
+    const newVal = prompt("Nastavit aktuální stav MTH:", currentMth);
+    if(newVal && !isNaN(newVal)) {
+      currentMth = parseFloat(newVal);
+      document.getElementById('val-mth').innerText = currentMth.toFixed(1);
+      await db.setSetting('machine_mth', currentMth); // Uložit do DB
+    }
+  };
+
+  // Modální okno
+  window.openServiceModal = () => {
+    document.getElementById('serviceModal').classList.remove('hidden');
+    // Předvyplnit aktuální datum a MTH
+    document.getElementById('s-date').valueAsDate = new Date();
+    document.getElementById('s-mth').value = currentMth;
+  };
+  
+  window.closeModal = () => {
+    document.getElementById('serviceModal').classList.add('hidden');
+  };
+
+  // Uložení servisu
+  window.saveService = async (e) => {
+    e.preventDefault();
+    const record = {
+      machineId: 'XROT95',
+      date: document.getElementById('s-date').value,
+      mth: document.getElementById('s-mth').value,
+      type: document.getElementById('s-type').value,
+      desc: document.getElementById('s-desc').value,
+      timestamp: Date.now()
+    };
+    
+    await db.addService(record);
+    window.closeModal();
+    alert("Záznam uložen do servisní knihy.");
+    loadLastService();
+  };
+
+  // Načtení posledního servisu
+  async function loadLastService() {
+    const logs = await db.getServicesByMachine('XROT95');
+    const el = document.getElementById('last-service-info');
+    if(logs.length > 0) {
+      const last = logs[0];
+      el.innerHTML = `
+        <div style="border-left: 2px solid var(--accent); padding-left: 10px;">
+          <div style="color:#fff; font-weight:bold;">${last.type}</div>
+          <div style="font-size:0.8rem;">${last.date} | ${last.mth} Mth</div>
+          <div style="color:#666;">${last.desc}</div>
+        </div>
+      `;
+    } else {
+      el.innerText = "Žádná historie servisů.";
+    }
+  }
+  loadLastService();
+
+  // Vyhledávání (Dummy implementation for visuals, expandable)
+  window.handleSearch = (input) => {
+    // Zde by byla logika filtrace
+    console.log("Searching: " + input.value);
+  };
+
+  // Export Dat
+  window.exportData = async () => {
+    const data = await db.exportDB();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `XROT_BACKUP_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
   };
 }

@@ -105,6 +105,9 @@
       container.innerHTML = '<div class="loader">INITIALIZING SYSTEM...</div>';
 
       try {
+        <div class="timer-display">
+    <span id="span_1">00</span> : <span id="span_2">00</span> : <span id="span_3">00</span>
+</div>
         // Cache buster pro vynucení nové verze
         const mod = await import('./modules-xrot-autonomy.js?v=' + Date.now());
         if (mod.init) {

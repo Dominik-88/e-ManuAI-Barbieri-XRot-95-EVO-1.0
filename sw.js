@@ -1,13 +1,10 @@
-/* ==========================================
-   SW.JS - Service Worker (Offline Mode)
-   ========================================== */
-const CACHE_NAME = 'xrot-evo-v2.1';
-const urlsToCache = [
+const CACHE_NAME = 'xrot-v2.1-prod';
+const ASSETS = [
     './',
     './index.html',
     './style.css',
-    './app.js',
-    './db.js',
+    './js/app.js',
+    './js/modules-core.js', // Nový modul
     './manifest.json',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
@@ -17,34 +14,44 @@ const urlsToCache = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('✓ SW: Caching assets');
-                return cache.addAll(urlsToCache);
-            })
-    );
-});
-
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Vrátit z cache pokud existuje, jinak stáhnout
-                return response || fetch(event.request);
-            })
+            .then((cache) => cache.addAll(ASSETS))
+            .then(() => self.skipWaiting())
     );
 });
 
 self.addEventListener('activate', (event) => {
-    const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
+        caches.keys().then((keys) => {
             return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) return caches.delete(key);
                 })
             );
+        })
+    );
+});
+
+// Strategie: Stale-While-Revalidate (Rychlost + Aktualizace)
+self.addEventListener('fetch', (event) => {
+    // Ignorujeme ne-GET requesty a chrome extensions
+    if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
+
+    event.respondWith(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(event.request).then((cachedResponse) => {
+                const fetchPromise = fetch(event.request)
+                    .then((networkResponse) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    })
+                    .catch(() => {
+                        // Fallback pro offline
+                        if (event.request.headers.get('accept').includes('text/html')) {
+                            return caches.match('./index.html');
+                        }
+                    });
+                return cachedResponse || fetchPromise;
+            });
         })
     );
 });

@@ -1,167 +1,180 @@
 /* ==========================================
-   APP.JS - Core Logic (Fixed & Safe)
+   APP.JS - Main Controller (Secured)
    ========================================== */
 
-// 1. GLOBAL STATE
-let map = null;
-let machineState = {
-    rpm: 0,
-    temp: 60,
-    tilt: 0,
-    engineOn: false
-};
+import { validateMessage, calculateRPM, getAIResponseMock, logger } from './modules-core.js';
 
-// 2. WAIT FOR DOM (Oprava chyby "Can't find variable")
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('✓ DOM Loaded - Initializing App');
-    
-    // Inicializace UI
-    updateUI();
-    setupEventListeners();
-    
-    // Schování loaderu
-    const loader = document.getElementById('globalLoader');
-    if (loader) loader.style.display = 'none';
+// Global State
+let map = null;
+let machineState = { rpm: 0, temp: 60, tilt: 0, engineOn: false };
+
+// UI Cache
+const ui = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        cacheDOMElements();
+        setupEventListeners();
+        setupKeyboardNavigation();
+        
+        // Remove Loader
+        const loader = document.getElementById('globalLoader');
+        if (loader) loader.style.display = 'none';
+
+        // Init DB (Dynamický import pro oddělení concerns)
+        // V produkci by db.js měl být také modul
+        if (window.XRotDB) {
+            window.db = new window.XRotDB();
+            await window.db.init();
+            showToast('Systém připraven', 'success');
+        }
+
+        updateUI();
+
+    } catch (error) {
+        console.error("Critical Init Error:", error);
+        showToast('Chyba inicializace systému', 'error');
+    }
 });
 
-// 3. MAP LOGIC (Lazy Loading)
+function cacheDOMElements() {
+    ui.rpm = document.getElementById('span_1');
+    ui.temp = document.getElementById('temp_val');
+    ui.tilt = document.getElementById('tilt_val');
+    ui.btnStart = document.getElementById('btn_start');
+    ui.chatForm = document.getElementById('chat_form');
+    ui.chatInput = document.getElementById('chat_input');
+    ui.chatMsgs = document.getElementById('chat_messages');
+}
+
+/* --- UI UPDATES (Security: textContent) --- */
+function updateUI() {
+    if (ui.rpm) ui.rpm.textContent = machineState.rpm;
+    if (ui.temp) ui.temp.textContent = `${machineState.temp}°C`;
+    if (ui.tilt) ui.tilt.textContent = `${machineState.tilt}°`;
+}
+
+/* --- MAPA (Lazy Load + Error Handling) --- */
 function initMap() {
     const mapContainer = document.getElementById('map');
-    if (!mapContainer) return; 
+    if (!mapContainer) return;
     
-    // Pokud už mapa existuje, jen ji překreslíme (fix šedé plochy)
     if (map) {
-        setTimeout(() => map.invalidateSize(), 100);
+        setTimeout(() => map.invalidateSize(), 200);
         return;
     }
 
     try {
-        console.log('Initializing Leaflet Map...');
-        map = L.map('map').setView([49.195060, 16.606837], 15); // Default Brno
-        
+        if (typeof L === 'undefined') throw new Error('Leaflet library not loaded');
+
+        map = L.map('map').setView([49.195060, 16.606837], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Marker stroje
         L.marker([49.195060, 16.606837]).addTo(map)
-            .bindPopup('<b>XRot 95 EVO</b><br>Status: Standby')
+            .bindPopup(createPopupContent('XRot 95 EVO', 'Status: Standby')) // Helper pro bezpečné HTML
             .openPopup();
-            
+
     } catch (e) {
-        console.error('Map Error:', e);
-        mapContainer.innerHTML = '<p style="color:red; text-align:center; padding:20px;">Mapa nedostupná (Offline?)</p>';
+        logger.error(e);
+        mapContainer.textContent = 'Mapu nelze načíst (Offline nebo chyba knihovny).';
+        mapContainer.style.display = 'flex';
+        mapContainer.style.alignItems = 'center';
+        mapContainer.style.justifyContent = 'center';
+        mapContainer.style.color = 'red';
     }
 }
 
-// 4. AI LOGIC (Simulace backendu)
-async function getAIResponse(userMessage) {
-    const lower = userMessage.toLowerCase();
-    
-    // Simulace myšlení (Loading)
-    await new Promise(r => setTimeout(r, 800));
-
-    try {
-        // Fallback logika (protože nemáme backend)
-        if (lower.includes('olej') || lower.includes('servis')) {
-            return "Manuál (Kap. 7): Výměna motorového oleje každých 50 motohodin. Typ: SAE 10W-30.";
-        }
-        if (lower.includes('svah') || lower.includes('náklon') || lower.includes('převrátí')) {
-            return "⚠️ VAROVÁNÍ: Max. náklon je 45°. Při 50° se aktivuje nouzové zastavení motoru.";
-        }
-        if (lower.includes('gps') || lower.includes('poloha')) {
-            return "GPS Status: RTK FIX. Přesnost ±2cm. Satelitů: 12.";
-        }
-        
-        return "Jsem AI asistent XRot. Mohu pomoci se servisem, náklony nebo GPS. Zkuste se zeptat konkrétněji.";
-        
-    } catch (error) {
-        console.error("AI Error:", error);
-        return "Chyba komunikace s AI modulem.";
-    }
+// Helper pro bezpečný obsah popupu (pokud musíme použít HTML v Leafletu)
+function createPopupContent(title, status) {
+    const div = document.createElement('div');
+    const h3 = document.createElement('h3');
+    h3.textContent = title;
+    const p = document.createElement('p');
+    p.textContent = status;
+    div.appendChild(h3);
+    div.appendChild(p);
+    return div;
 }
 
-// 5. UI UPDATES (Bezpečný přístup k elementům)
-function updateUI() {
-    // Používáme ID 'span_1' pro RPM, aby to sedělo s vaším screenshotem chyby
-    const elRpm = document.getElementById('span_1');
-    const elTemp = document.getElementById('temp_val');
-    const elTilt = document.getElementById('tilt_val');
-
-    if (elRpm) elRpm.innerText = machineState.rpm;
-    if (elTemp) elTemp.innerText = machineState.temp + "°C";
-    if (elTilt) elTilt.innerText = machineState.tilt + "°";
-}
-
-// 6. EVENT LISTENERS
+/* --- EVENT LISTENERS --- */
 function setupEventListeners() {
-    // Start Button
-    const btnStart = document.getElementById('btn_start');
-    if (btnStart) {
-        btnStart.addEventListener('click', () => {
+    // Engine Start/Stop
+    if (ui.btnStart) {
+        ui.btnStart.addEventListener('click', () => {
             machineState.engineOn = !machineState.engineOn;
+            machineState.rpm = calculateRPM(machineState.engineOn, false);
             
-            if (machineState.engineOn) {
-                machineState.rpm = 1450; // Volnoběh
-                btnStart.innerText = "STOP MOTORU";
-                btnStart.classList.replace('btn-primary', 'btn-danger');
-                
-                // Uložení do DB
-                if(typeof db !== 'undefined') {
-                    db.add('engineLogs', { event: 'START', date: new Date() });
-                }
-            } else {
-                machineState.rpm = 0;
-                btnStart.innerText = "START MOTORU";
-                btnStart.classList.replace('btn-danger', 'btn-primary');
-            }
+            ui.btnStart.textContent = machineState.engineOn ? "STOP MOTORU" : "START MOTORU";
+            ui.btnStart.className = machineState.engineOn ? "btn btn-danger" : "btn btn-primary";
+            ui.btnStart.setAttribute('aria-pressed', machineState.engineOn);
+            
+            showToast(machineState.engineOn ? 'Motor nastartován' : 'Motor zastaven', 'info');
             updateUI();
         });
     }
 
-    // Chat
-    const chatBtn = document.getElementById('chat_send');
-    const chatInput = document.getElementById('chat_input');
-    
-    if (chatBtn && chatInput) {
-        chatBtn.addEventListener('click', async () => {
-            const msg = chatInput.value.trim();
-            if (!msg) return; 
+    // Chat Submit
+    if (ui.chatForm) {
+        ui.chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = ui.chatInput.value;
             
-            addChatMessage(msg, 'user');
-            chatInput.value = '';
-            
-            const response = await getAIResponse(msg);
-            addChatMessage(response, 'bot');
+            const validation = validateMessage(msg);
+            if (!validation.isValid) {
+                showToast(validation.error, 'error');
+                return;
+            }
+
+            addChatMessage(validation.sanitized, 'user');
+            ui.chatInput.value = '';
+
+            const response = await getAIResponseMock(validation.sanitized);
+            if (response.success) {
+                addChatMessage(response.text, 'bot');
+            } else {
+                showToast(response.errorDetail || 'Chyba AI', 'error');
+            }
         });
     }
 
-    // Přepínání záložek (Tabs)
+    // Tab Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            // Reset aktivní třídy
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.querySelectorAll('.module').forEach(m => m.classList.add('hidden'));
-            
-            // Aktivace nové
-            e.currentTarget.classList.add('active');
-            const targetId = e.currentTarget.getAttribute('data-target');
-            const targetModule = document.getElementById(targetId);
-            
-            if (targetModule) {
-                targetModule.classList.remove('hidden');
-                // Pokud je to mapa, inicializuj ji
-                if (targetId === 'module_map') {
-                    setTimeout(initMap, 100);
-                }
+        item.addEventListener('click', (e) => handleTabSwitch(e.currentTarget));
+        // A11y: Enter key support
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleTabSwitch(e.currentTarget);
             }
         });
     });
 }
 
+function handleTabSwitch(target) {
+    // UI Update
+    document.querySelectorAll('.nav-item').forEach(i => {
+        i.classList.remove('active');
+        i.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.module').forEach(m => m.classList.add('hidden'));
+    
+    // Activate target
+    target.classList.add('active');
+    target.setAttribute('aria-selected', 'true');
+    const moduleId = target.getAttribute('data-target');
+    const moduleEl = document.getElementById(moduleId);
+    
+    if (moduleEl) {
+        moduleEl.classList.remove('hidden');
+        if (moduleId === 'module_map') initMap();
+    }
+}
+
+/* --- CHAT UTILS (Security: createElement) --- */
 function addChatMessage(text, sender) {
-    const container = document.getElementById('chat_messages');
-    if (!container) return;
+    if (!ui.chatMsgs) return;
     
     const div = document.createElement('div');
     div.style.textAlign = sender === 'user' ? 'right' : 'left';
@@ -174,9 +187,34 @@ function addChatMessage(text, sender) {
     bubble.style.borderRadius = '15px';
     bubble.style.display = 'inline-block';
     bubble.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
-    bubble.innerText = text;
+    
+    // SECURITY: Použití textContent brání HTML injection/XSS
+    bubble.textContent = text;
     
     div.appendChild(bubble);
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    ui.chatMsgs.appendChild(div);
+    ui.chatMsgs.scrollTop = ui.chatMsgs.scrollHeight;
+}
+
+/* --- TOAST SYSTEM (UX) --- */
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+
+    // Auto remove
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function setupKeyboardNavigation() {
+    // Placeholder pro budoucí pokročilou navigaci klávesnicí
+    // Zajišťuje, že všechny prvky s tabindex="0" reagují standardně
 }

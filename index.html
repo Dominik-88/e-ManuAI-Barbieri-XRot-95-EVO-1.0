@@ -4,122 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
-    <meta name="description" content="XRot 95 EVO - Inteligentní systém řízení">
-    <title>XRot 95 EVO - AI Dashboard</title>
+    <meta name="description" content="XRot 95 EVO - Inteligentní systém řízení autonomního stroje">
+    <title>XRot 95 EVO - Control Unit</title>
 
     <link rel="manifest" href="manifest.json">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <style>
-        /* ==================== RESET & BASE ==================== */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #667eea; --primary-dark: #5568d3; --primary-light: #818cf8;
-            --secondary: #10b981; --secondary-dark: #059669; --accent: #f59e0b;
-            --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6;
-            --dark: #0f172a; --dark-secondary: #1e293b; --dark-tertiary: #334155;
-            --light: #f8fafc; --light-secondary: #f1f5f9; --border: #e2e8f0;
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
-            --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.25);
-            --transition-base: 0.3s ease;
-            --z-modal: 400;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            background-attachment: fixed;
-            min-height: 100vh;
-            color: var(--dark);
-            overflow-x: hidden;
-        }
-
-        /* Particles */
-        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .particle {
-            position: absolute; background: rgba(255, 255, 255, 0.6); border-radius: 50%;
-            animation: float 20s infinite ease-in-out;
-        }
-        @keyframes float {
-            0% { transform: translateY(0) translateX(0); opacity: 0; }
-            10% { opacity: 1; }
-            100% { transform: translateY(-100vh) translateX(100px); opacity: 0; }
-        }
-
-        /* Container & Glass */
-        .app-container { max-width: 1600px; margin: 20px auto; position: relative; z-index: 1; padding: 0 10px; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: var(--shadow-xl); overflow: hidden;
-        }
-
-        /* Header */
-        .header { background: linear-gradient(135deg, var(--dark) 0%, var(--dark-secondary) 100%); padding: 25px; color: white; }
-        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .logo-section { display: flex; align-items: center; gap: 15px; }
-        .logo-icon {
-            width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;
-        }
-        .status-indicators { display: flex; gap: 10px; }
-        .status-pill {
-            padding: 8px 15px; border-radius: 10px; background: rgba(255,255,255,0.1);
-            text-align: center; border: 1px solid rgba(255,255,255,0.1);
-        }
-        .status-pill-value { font-weight: bold; display: block; }
-        .status-pill-label { font-size: 10px; opacity: 0.7; text-transform: uppercase; }
-
-        /* Navigation */
-        .nav-container { background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-        .nav { display: flex; overflow-x: auto; list-style: none; }
-        .nav-item { padding: 15px 25px; cursor: pointer; font-weight: 600; color: var(--dark-tertiary); transition: var(--transition-base); border-bottom: 3px solid transparent; }
-        .nav-item:hover, .nav-item.active { color: var(--primary); background: var(--light); }
-        .nav-item.active { border-bottom-color: var(--primary); }
-
-        /* Content & Grid */
-        .content-wrapper { padding: 30px; min-height: 60vh; }
-        .grid { display: grid; gap: 20px; }
-        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-        
-        /* Stat Cards (Stopky) */
-        .stat-card {
-            background: white; padding: 25px; border-radius: 16px; text-align: center;
-            box-shadow: var(--shadow-lg); border: 1px solid var(--border); position: relative; overflow: hidden;
-        }
-        .stat-card.highlight { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
-        .stat-value { font-size: 48px; font-weight: 800; display: block; font-family: 'Courier New', monospace; }
-        .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-top: 5px; }
-
-        /* Controls & Buttons */
-        .control-panel { background: var(--light); padding: 20px; border-radius: 16px; margin-top: 20px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .btn { padding: 12px 30px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: transform 0.2s; color: white; display: flex; align-items: center; gap: 8px; }
-        .btn:active { transform: scale(0.95); }
-        .btn-primary { background: var(--primary); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
-        .btn-danger { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
-        .btn-warning { background: var(--warning); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
-
-        /* AI Chat Button */
-        .chatbot-toggle {
-            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
-            background: var(--primary); border-radius: 50%; border: none; color: white;
-            font-size: 24px; cursor: pointer; box-shadow: var(--shadow-xl); z-index: var(--z-modal);
-            display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
-        }
-        .chatbot-toggle:hover { transform: scale(1.1) rotate(10deg); }
-
-        @media (max-width: 768px) {
-            .stat-value { font-size: 36px; }
-            .grid-4 { grid-template-columns: 1fr 1fr; }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="particles" id="particles"></div>
+
+    <div id="critical_alert">
+        <div class="alert-content">
+            <i class="fa-solid fa-triangle-exclamation pulse-icon"></i>
+            <h1>KRITICKÁ CHYBA</h1>
+            <p id="alert_message">SYSTEM FAILURE</p>
+            <button onclick="emergencyReset()" class="btn btn-danger-outline">
+                <i class="fa-solid fa-power-off"></i> NOUZOVÝ RESET
+            </button>
+        </div>
+    </div>
 
     <div class="app-container glass-card">
         
@@ -128,19 +35,19 @@
                 <div class="logo-section">
                     <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
                     <div class="logo-text">
-                        <h1 style="font-size: 24px; font-weight: 800;">BARBIERI XROT 95</h1>
-                        <p style="opacity: 0.8; font-size: 13px;">E-MANUAI SYSTEM • EVO EDITION</p>
+                        <h1>BARBIERI XROT 95</h1>
+                        <p>EVO DIAGNOSTIC SYSTEM • v2.0</p>
                     </div>
                 </div>
                 
                 <div class="status-indicators">
                     <div class="status-pill">
-                        <span class="status-pill-label">System</span>
-                        <span class="status-pill-value" style="color: #4ade80;">ONLINE</span>
+                        <span class="status-pill-label">GPS RTK</span>
+                        <span id="gps_status" class="status-pill-value status-ok">FIXED (±2cm)</span>
                     </div>
                     <div class="status-pill">
                         <span class="status-pill-label">Baterie</span>
-                        <span class="status-pill-value">98%</span>
+                        <span id="battery_val" class="status-pill-value">98%</span>
                     </div>
                 </div>
             </div>
@@ -148,91 +55,91 @@
 
         <div class="nav-container">
             <ul class="nav">
-                <li class="nav-item active"><i class="fa-solid fa-gauge-high"></i> Dashboard</li>
-                <li class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Telemetrie</li>
-                <li class="nav-item"><i class="fa-solid fa-book-open"></i> E-Manuál</li>
-                <li class="nav-item"><i class="fa-solid fa-microchip"></i> AI Asistent</li>
+                <li class="nav-item active"><i class="fa-solid fa-gauge-high"></i> Live Data</li>
+                <li class="nav-item"><i class="fa-solid fa-chart-line"></i> Telemetrie</li>
+                <li class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Mapa</li>
+                <li class="nav-item"><i class="fa-solid fa-book"></i> E-Manuál</li>
             </ul>
         </div>
 
         <div class="content-wrapper">
             
-            <h2 style="margin-bottom: 20px; color: var(--dark-secondary);">Operační Čas</h2>
-            
-            <div class="grid grid-4">
-                <div class="stat-card highlight">
-                    <span id="span_1" class="stat-value">00</span>
-                    <span class="stat-label">Minuty</span>
+            <div class="grid grid-4 mb-2">
+                <div class="stat-card" id="card_tilt">
+                    <span id="tilt_val" class="stat-value">0°</span>
+                    <span class="stat-label">Svahová dostupnost</span>
+                    <div class="progress mt-1">
+                        <div id="tilt_bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
                 </div>
-                <div class="stat-card highlight">
-                    <span id="span_2" class="stat-value">00</span>
-                    <span class="stat-label">Sekundy</span>
-                </div>
+                
                 <div class="stat-card">
-                    <span id="span_3" class="stat-value">00</span>
-                    <span class="stat-label">Setiny</span>
+                    <span id="temp_val" class="stat-value">60°C</span>
+                    <span class="stat-label">Teplota Oleje</span>
                 </div>
-                <div class="stat-card" style="display:none">
-                    <span id="span_4">00</span> 
+
+                <div class="stat-card highlight">
+                    <span id="rpm_val" class="stat-value">0</span>
+                    <span class="stat-label">RPM (Kawasaki)</span>
+                </div>
+
+                <div class="stat-card">
+                    <span id="load_val" class="stat-value">0 A</span>
+                    <span class="stat-label">Zátěž Nožů (PTO)</span>
                 </div>
             </div>
 
-            <div class="control-panel">
-                <button id="btn_start" class="btn btn-primary">
-                    <i class="fa-solid fa-play"></i> START
-                </button>
-                <button id="btn_stop" class="btn btn-danger">
-                    <i class="fa-solid fa-pause"></i> STOP
-                </button>
-                <button id="btn_reset" class="btn btn-warning">
-                    <i class="fa-solid fa-rotate-right"></i> RESET
-                </button>
-            </div>
-
-            <div style="margin-top: 30px;">
-                <h3 style="margin-bottom: 15px; font-size: 18px;">Stav Senzorů (Gyroskop)</h3>
-                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
-                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between;">
-                        <span>Náklon X</span>
-                        <span id="gyro_data">0°</span>
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-gamepad"></i> Dálkové Řízení</h3>
                     </div>
-                    <div style="height: 10px; background: var(--light); border-radius: 5px; overflow: hidden;">
-                        <div style="width: 45%; height: 100%; background: var(--secondary);"></div>
+                    <div class="control-panel-body">
+                        <button id="btn_start" class="btn btn-primary mb-1">
+                            <i class="fa-solid fa-play"></i> START MOTORU
+                        </button>
+                        <div class="d-flex gap-1">
+                            <button id="btn_pto" class="btn btn-warning flex-1" disabled>
+                                <i class="fa-solid fa-fan"></i> PTO (Nože)
+                            </button>
+                            <button id="btn_stop" class="btn btn-danger flex-1">
+                                <i class="fa-solid fa-stop"></i> STOP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-shield-halved"></i> AI Watchdog Log</h3>
+                    </div>
+                    <div id="system_log" class="log-window">
+                        <div class="log-entry success">[SYSTEM] Booting XRot Core...</div>
+                        <div class="log-entry">[SYSTEM] API Connection: Established</div>
                     </div>
                 </div>
             </div>
-
-             <div style="margin-top: 20px; text-align: center;">
-                 <div id="camera_feed" style="background: #000; height: 200px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #333;">
-                     <i class="fa-solid fa-camera-slash" style="font-size: 40px;"></i>
-                     <p style="margin-top: 10px; color: #666;">Kamera Vypnuta</p>
+            
+            <div class="mt-2">
+                 <div class="card no-padding overflow-hidden bg-black">
+                     <div id="camera_feed" class="camera-placeholder">
+                         <i class="fa-solid fa-video-slash"></i>
+                         <span>Čekám na signál z kamery...</span>
+                     </div>
                  </div>
              </div>
 
         </div>
     </div>
 
-    <button class="chatbot-toggle">
-        <i class="fa-solid fa-robot"></i>
-    </button>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const container = document.getElementById('particles');
-            const particleCount = 20;
-            for (let i = 0; i < particleCount; i++) {
-                const p = document.createElement('div');
-                p.classList.add('particle');
-                p.style.left = Math.random() * 100 + 'vw';
-                p.style.top = Math.random() * 100 + 'vh';
-                p.style.animationDuration = (Math.random() * 10 + 10) + 's';
-                p.style.width = (Math.random() * 5 + 2) + 'px';
-                p.style.height = p.style.width;
-                container.appendChild(p);
-            }
-        });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker Registered'))
+                .catch(err => console.error('Service Worker Failed', err));
+        }
     </script>
 
-    <script src="js/app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

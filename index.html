@@ -3,109 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Ovládací panel pro autonomní stroj XRot 95 EVO.">
     <title>XRot 95 EVO Dashboard</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
 </head>
 <body>
 
-    <div id="globalLoader">
-        <div class="spinner"></div>
+    <div id="globalLoader" role="alert" aria-live="assertive">
+        <div class="spinner" aria-hidden="true"></div>
         <div>Načítání systému XRot...</div>
     </div>
+
+    <div id="toast-container" aria-live="polite"></div>
 
     <div class="app-container">
         <header class="header glass-card">
             <div class="header-content">
                 <div class="logo">
-                    <h2><i class="fas fa-robot"></i> XRot 95 EVO</h2>
+                    <h1 style="font-size: 1.2rem; margin: 0;"><i class="fas fa-robot" aria-hidden="true"></i> XRot 95 EVO</h1>
                 </div>
-                <div class="status">
-                    <span class="badge"><i class="fas fa-wifi"></i> ONLINE</span>
-                    <span class="badge"><i class="fas fa-satellite"></i> RTK FIX</span>
+                <div class="status" role="status">
+                    <span class="badge" aria-label="Status připojení: Online"><i class="fas fa-wifi" aria-hidden="true"></i> ONLINE</span>
+                    <span class="badge" aria-label="Status GPS: RTK Fix"><i class="fas fa-satellite" aria-hidden="true"></i> RTK FIX</span>
                 </div>
             </div>
         </header>
 
         <nav class="nav-container glass-card">
-            <ul class="nav">
-                <li class="nav-item active" data-target="module_dash">Dashboard</li>
-                <li class="nav-item" data-target="module_map">Mapa & GPS</li>
-                <li class="nav-item" data-target="module_chat">AI Asistent</li>
+            <ul class="nav" role="tablist">
+                <li class="nav-item active" role="tab" tabindex="0" aria-selected="true" aria-controls="module_dash" data-target="module_dash">Dashboard</li>
+                <li class="nav-item" role="tab" tabindex="0" aria-selected="false" aria-controls="module_map" data-target="module_map">Mapa & GPS</li>
+                <li class="nav-item" role="tab" tabindex="0" aria-selected="false" aria-controls="module_chat" data-target="module_chat">AI Asistent</li>
             </ul>
         </nav>
 
         <main class="content-wrapper">
             
-            <div id="module_dash" class="module">
+            <section id="module_dash" class="module" role="tabpanel" aria-labelledby="Dashboard">
                 <div class="grid-4">
-                    <div class="stat-card">
+                    <article class="stat-card">
                         <span id="span_1" class="stat-value">0</span>
                         <span class="stat-label">RPM Motor</span>
-                    </div>
-                    <div class="stat-card">
+                    </article>
+                    <article class="stat-card">
                         <span id="temp_val" class="stat-value">60°C</span>
                         <span class="stat-label">Teplota</span>
-                    </div>
-                    <div class="stat-card">
+                    </article>
+                    <article class="stat-card">
                         <span id="tilt_val" class="stat-value">0°</span>
                         <span class="stat-label">Náklon</span>
-                    </div>
-                    <div class="stat-card">
+                    </article>
+                    <article class="stat-card">
                         <span class="stat-value">98%</span>
                         <span class="stat-label">Baterie</span>
-                    </div>
+                    </article>
                 </div>
 
                 <div class="grid-2">
                     <div class="glass-card" style="padding: 20px;">
-                        <h3 style="margin-bottom: 15px;">Rychlé Ovládání</h3>
-                        <button id="btn_start" class="btn btn-primary">START MOTORU</button>
-                        <button class="btn btn-danger">NOUZOVÉ ZASTAVENÍ</button>
+                        <h2 style="font-size: 1.1rem; margin-bottom: 15px;">Rychlé Ovládání</h2>
+                        <button id="btn_start" class="btn btn-primary" aria-label="Startovat nebo zastavit motor">START MOTORU</button>
+                        <button class="btn btn-danger" aria-label="Okamžité nouzové zastavení">NOUZOVÉ ZASTAVENÍ</button>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div id="module_map" class="module hidden">
+            <section id="module_map" class="module hidden" role="tabpanel" aria-labelledby="Mapa">
                 <div class="glass-card" style="padding: 10px;">
-                    <div id="map"></div>
+                    <div id="map" aria-label="Interaktivní mapa polohy stroje" role="application"></div>
                 </div>
-            </div>
+            </section>
 
-            <div id="module_chat" class="module hidden">
+            <section id="module_chat" class="module hidden" role="tabpanel" aria-labelledby="AI Chat">
                 <div class="glass-card" style="height: 500px; display: flex; flex-direction: column;">
-                    <div id="chat_messages" style="flex: 1; overflow-y: auto; padding: 20px;">
-                        <div style="text-align: left;">
-                            <span style="background: white; padding: 8px 12px; border-radius: 15px; display: inline-block;">
-                                Ahoj, jsem AI asistent stroje XRot. S čím mohu pomoci?
-                            </span>
+                    <div id="chat_messages" role="log" aria-live="polite" style="flex: 1; overflow-y: auto; padding: 20px;">
                         </div>
-                    </div>
-                    <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                    <form id="chat_form" style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                        <label for="chat_input" class="sr-only">Napište zprávu</label>
                         <input type="text" id="chat_input" placeholder="Zeptej se (např. servisní interval)..." style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                        <button id="chat_send" class="btn btn-primary" style="width: auto; margin: 0;"><i class="fas fa-paper-plane"></i></button>
-                    </div>
+                        <button type="submit" id="chat_send" class="btn btn-primary" style="width: auto; margin: 0;" aria-label="Odeslat zprávu"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
+                    </form>
                 </div>
-            </div>
+            </section>
 
         </main>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
     
-    <script src="db.js"></script>
-    <script src="app.js"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log('SW Registered'))
-                .catch(err => console.error('SW Error', err));
-        }
-    </script>
+    <script type="module" src="js/app.js" defer></script>
+
+    <style>
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+        
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; animation: slideIn 0.3s forwards; }
+        .toast.error { background: #ef4444; }
+        .toast.success { background: #10b981; }
+        .toast.info { background: #3b82f6; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 </body>
 </html>

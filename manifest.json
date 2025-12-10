@@ -11,6 +11,11 @@
       "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/svgs/solid/robot.svg",
       "sizes": "192x192",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/svgs/solid/robot.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
     }
   ]
 }

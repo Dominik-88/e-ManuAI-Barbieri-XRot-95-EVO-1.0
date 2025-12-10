@@ -70,3 +70,7 @@ class XRotDB {
 // Inicializace a export
 const db = new XRotDB();
 db.init().catch(console.error);
+// ... (kód třídy XRotDB zůstává stejný) ...
+
+// Na konci souboru:
+window.XRotDB = XRotDB; 

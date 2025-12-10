@@ -3,143 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#667eea">
-    <meta name="description" content="XRot 95 EVO - Inteligentní systém řízení autonomního stroje">
-    <title>XRot 95 EVO - Control Unit</title>
-
+    <title>XRot 95 EVO Dashboard</title>
+    
     <link rel="manifest" href="manifest.json">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
     <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
 
-    <div class="particles" id="particles"></div>
-
-    <div id="critical_alert">
-        <div class="alert-content">
-            <i class="fa-solid fa-triangle-exclamation pulse-icon"></i>
-            <h1>KRITICKÁ CHYBA</h1>
-            <p id="alert_message">SYSTEM FAILURE</p>
-            <button onclick="emergencyReset()" class="btn btn-danger-outline">
-                <i class="fa-solid fa-power-off"></i> NOUZOVÝ RESET
-            </button>
-        </div>
+    <div id="globalLoader">
+        <div class="spinner"></div>
+        <div>Načítání systému XRot...</div>
     </div>
 
-    <div class="app-container glass-card">
-        
-        <div class="header">
+    <div class="app-container">
+        <header class="header glass-card">
             <div class="header-content">
-                <div class="logo-section">
-                    <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
-                    <div class="logo-text">
-                        <h1>BARBIERI XROT 95</h1>
-                        <p>EVO DIAGNOSTIC SYSTEM • v2.0</p>
-                    </div>
+                <div class="logo">
+                    <h2><i class="fas fa-robot"></i> XRot 95 EVO</h2>
                 </div>
-                
-                <div class="status-indicators">
-                    <div class="status-pill">
-                        <span class="status-pill-label">GPS RTK</span>
-                        <span id="gps_status" class="status-pill-value status-ok">FIXED (±2cm)</span>
-                    </div>
-                    <div class="status-pill">
-                        <span class="status-pill-label">Baterie</span>
-                        <span id="battery_val" class="status-pill-value">98%</span>
-                    </div>
+                <div class="status">
+                    <span class="badge"><i class="fas fa-wifi"></i> ONLINE</span>
+                    <span class="badge"><i class="fas fa-satellite"></i> RTK FIX</span>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="nav-container">
+        <nav class="nav-container glass-card">
             <ul class="nav">
-                <li class="nav-item active"><i class="fa-solid fa-gauge-high"></i> Live Data</li>
-                <li class="nav-item"><i class="fa-solid fa-chart-line"></i> Telemetrie</li>
-                <li class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Mapa</li>
-                <li class="nav-item"><i class="fa-solid fa-book"></i> E-Manuál</li>
+                <li class="nav-item active" data-target="module_dash">Dashboard</li>
+                <li class="nav-item" data-target="module_map">Mapa & GPS</li>
+                <li class="nav-item" data-target="module_chat">AI Asistent</li>
             </ul>
-        </div>
+        </nav>
 
-        <div class="content-wrapper">
+        <main class="content-wrapper">
             
-            <div class="grid grid-4 mb-2">
-                <div class="stat-card" id="card_tilt">
-                    <span id="tilt_val" class="stat-value">0°</span>
-                    <span class="stat-label">Svahová dostupnost</span>
-                    <div class="progress mt-1">
-                        <div id="tilt_bar" class="progress-bar" style="width: 0%"></div>
+            <div id="module_dash" class="module">
+                <div class="grid-4">
+                    <div class="stat-card">
+                        <span id="span_1" class="stat-value">0</span>
+                        <span class="stat-label">RPM Motor</span>
+                    </div>
+                    <div class="stat-card">
+                        <span id="temp_val" class="stat-value">60°C</span>
+                        <span class="stat-label">Teplota</span>
+                    </div>
+                    <div class="stat-card">
+                        <span id="tilt_val" class="stat-value">0°</span>
+                        <span class="stat-label">Náklon</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-value">98%</span>
+                        <span class="stat-label">Baterie</span>
                     </div>
                 </div>
-                
-                <div class="stat-card">
-                    <span id="temp_val" class="stat-value">60°C</span>
-                    <span class="stat-label">Teplota Oleje</span>
-                </div>
 
-                <div class="stat-card highlight">
-                    <span id="rpm_val" class="stat-value">0</span>
-                    <span class="stat-label">RPM (Kawasaki)</span>
-                </div>
-
-                <div class="stat-card">
-                    <span id="load_val" class="stat-value">0 A</span>
-                    <span class="stat-label">Zátěž Nožů (PTO)</span>
+                <div class="grid-2">
+                    <div class="glass-card" style="padding: 20px;">
+                        <h3 style="margin-bottom: 15px;">Rychlé Ovládání</h3>
+                        <button id="btn_start" class="btn btn-primary">START MOTORU</button>
+                        <button class="btn btn-danger">NOUZOVÉ ZASTAVENÍ</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fa-solid fa-gamepad"></i> Dálkové Řízení</h3>
-                    </div>
-                    <div class="control-panel-body">
-                        <button id="btn_start" class="btn btn-primary mb-1">
-                            <i class="fa-solid fa-play"></i> START MOTORU
-                        </button>
-                        <div class="d-flex gap-1">
-                            <button id="btn_pto" class="btn btn-warning flex-1" disabled>
-                                <i class="fa-solid fa-fan"></i> PTO (Nože)
-                            </button>
-                            <button id="btn_stop" class="btn btn-danger flex-1">
-                                <i class="fa-solid fa-stop"></i> STOP
-                            </button>
+            <div id="module_map" class="module hidden">
+                <div class="glass-card" style="padding: 10px;">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div id="module_chat" class="module hidden">
+                <div class="glass-card" style="height: 500px; display: flex; flex-direction: column;">
+                    <div id="chat_messages" style="flex: 1; overflow-y: auto; padding: 20px;">
+                        <div style="text-align: left;">
+                            <span style="background: white; padding: 8px 12px; border-radius: 15px; display: inline-block;">
+                                Ahoj, jsem AI asistent stroje XRot. S čím mohu pomoci?
+                            </span>
                         </div>
                     </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fa-solid fa-shield-halved"></i> AI Watchdog Log</h3>
-                    </div>
-                    <div id="system_log" class="log-window">
-                        <div class="log-entry success">[SYSTEM] Booting XRot Core...</div>
-                        <div class="log-entry">[SYSTEM] API Connection: Established</div>
+                    <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                        <input type="text" id="chat_input" placeholder="Zeptej se (např. servisní interval)..." style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                        <button id="chat_send" class="btn btn-primary" style="width: auto; margin: 0;"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
-            
-            <div class="mt-2">
-                 <div class="card no-padding overflow-hidden bg-black">
-                     <div id="camera_feed" class="camera-placeholder">
-                         <i class="fa-solid fa-video-slash"></i>
-                         <span>Čekám na signál z kamery...</span>
-                     </div>
-                 </div>
-             </div>
 
-        </div>
+        </main>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+    
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('Service Worker Registered'))
-                .catch(err => console.error('Service Worker Failed', err));
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('SW Registered'))
+                .catch(err => console.error('SW Error', err));
         }
     </script>
-
-    <script src="app.js"></script>
 </body>
 </html>

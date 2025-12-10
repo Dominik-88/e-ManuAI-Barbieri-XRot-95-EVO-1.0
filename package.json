@@ -1,0 +1,21 @@
+{
+  "name": "barbieri-xrot-95-evo-controller",
+  "version": "2.0.0",
+  "description": "Profesionální řídící jednotka pro autonomní stroj XRot 95.",
+  "main": "js/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "serve .",
+    "build": "echo 'Build process: Minifying JS/CSS...' && mkdir -p dist && cp index.html style.css manifest.json sw.js dist/ && cp -r js dist/",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "author": "Dominik Schmied",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "serve": "^14.2.1"
+  }
+}

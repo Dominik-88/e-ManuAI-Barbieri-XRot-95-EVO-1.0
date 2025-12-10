@@ -2,7 +2,7 @@
    SERVICE BOOK MODULE (GENERIC)
    Verze: 2.0 (Fixed Init Export)
 ============================================================ */
-import { db } from './db.js';
+import { db } from '../db/db.js';
 
 let currentMachineId = null;
 

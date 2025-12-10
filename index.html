@@ -1,138 +1,238 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>BARBIERI XROT 95 EVO</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#000000">
-  
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="XRot 95 EVO - Inteligentní systém řízení">
+    <title>XRot 95 EVO - AI Dashboard</title>
 
-  <style>
-    /* === CYBERPUNK CORE === */
-    :root {
-      --bg: #030305;
-      --panel: #0a0a0c;
-      --panel-border: 1px solid #1f1f25;
-      --accent: #00f3ff; /* Neon Cyan */
-      --accent-glow: 0 0 10px rgba(0, 243, 255, 0.4);
-      --danger: #ff003c; /* Cyber Red */
-      --warn: #fcee0a;   /* Cyber Yellow */
-      --text-main: #ffffff;
-      --text-dim: #6b7280;
-      --font-head: 'Chakra Petch', sans-serif;
-      --font-body: 'Rajdhani', sans-serif;
-    }
+    <link rel="manifest" href="manifest.json">
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    
-    body {
-      margin: 0; background: var(--bg); color: var(--text-main); font-family: var(--font-body);
-      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-    }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
-    /* === HEADER: BRANDING === */
-    header {
-      background: rgba(5, 5, 8, 0.95);
-      border-bottom: 1px solid #333;
-      padding: 15px 0;
-      text-align: center;
-      z-index: 100;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.8);
-    }
-    
-    h1 {
-      margin: 0;
-      font-family: var(--font-head);
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--text-main);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      text-shadow: 0 0 5px rgba(255,255,255,0.2);
-    }
+    <style>
+        /* ==================== RESET & BASE ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #667eea; --primary-dark: #5568d3; --primary-light: #818cf8;
+            --secondary: #10b981; --secondary-dark: #059669; --accent: #f59e0b;
+            --danger: #ef4444; --warning: #f59e0b; --info: #3b82f6;
+            --dark: #0f172a; --dark-secondary: #1e293b; --dark-tertiary: #334155;
+            --light: #f8fafc; --light-secondary: #f1f5f9; --border: #e2e8f0;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+            --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.25);
+            --transition-base: 0.3s ease;
+            --z-modal: 400;
+        }
 
-    .subtitle {
-      margin-top: 4px;
-      font-size: 0.7rem;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-weight: 600;
-      text-shadow: var(--accent-glow);
-    }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: var(--dark);
+            overflow-x: hidden;
+        }
 
-    /* === MAIN AREA === */
-    main { flex: 1; overflow-y: auto; position: relative; }
-    #moduleContainer { height: 100%; }
+        /* Particles */
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particle {
+            position: absolute; background: rgba(255, 255, 255, 0.6); border-radius: 50%;
+            animation: float 20s infinite ease-in-out;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(100px); opacity: 0; }
+        }
 
-    /* === LOADING & ERROR STATES === */
-    .loader {
-      display: flex; justify-content: center; align-items: center; height: 100%;
-      color: var(--accent); font-family: var(--font-head); animation: pulse 1.5s infinite;
-    }
-    .error-box {
-      margin: 20px; padding: 20px; border: 1px solid var(--danger); 
-      background: rgba(255, 0, 60, 0.05); color: var(--danger);
-      font-family: monospace; font-size: 0.9rem;
-    }
+        /* Container & Glass */
+        .app-container { max-width: 1600px; margin: 20px auto; position: relative; z-index: 1; padding: 0 10px; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: var(--shadow-xl); overflow: hidden;
+        }
 
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        /* Header */
+        .header { background: linear-gradient(135deg, var(--dark) 0%, var(--dark-secondary) 100%); padding: 25px; color: white; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .logo-section { display: flex; align-items: center; gap: 15px; }
+        .logo-icon {
+            width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;
+        }
+        .status-indicators { display: flex; gap: 10px; }
+        .status-pill {
+            padding: 8px 15px; border-radius: 10px; background: rgba(255,255,255,0.1);
+            text-align: center; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .status-pill-value { font-weight: bold; display: block; }
+        .status-pill-label { font-size: 10px; opacity: 0.7; text-transform: uppercase; }
 
-    /* === SCROLLBAR === */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-  </style>
+        /* Navigation */
+        .nav-container { background: white; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .nav { display: flex; overflow-x: auto; list-style: none; }
+        .nav-item { padding: 15px 25px; cursor: pointer; font-weight: 600; color: var(--dark-tertiary); transition: var(--transition-base); border-bottom: 3px solid transparent; }
+        .nav-item:hover, .nav-item.active { color: var(--primary); background: var(--light); }
+        .nav-item.active { border-bottom-color: var(--primary); }
+
+        /* Content & Grid */
+        .content-wrapper { padding: 30px; min-height: 60vh; }
+        .grid { display: grid; gap: 20px; }
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+        
+        /* Stat Cards (Stopky) */
+        .stat-card {
+            background: white; padding: 25px; border-radius: 16px; text-align: center;
+            box-shadow: var(--shadow-lg); border: 1px solid var(--border); position: relative; overflow: hidden;
+        }
+        .stat-card.highlight { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
+        .stat-value { font-size: 48px; font-weight: 800; display: block; font-family: 'Courier New', monospace; }
+        .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-top: 5px; }
+
+        /* Controls & Buttons */
+        .control-panel { background: var(--light); padding: 20px; border-radius: 16px; margin-top: 20px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .btn { padding: 12px 30px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: transform 0.2s; color: white; display: flex; align-items: center; gap: 8px; }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background: var(--primary); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
+        .btn-warning { background: var(--warning); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+
+        /* AI Chat Button */
+        .chatbot-toggle {
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px;
+            background: var(--primary); border-radius: 50%; border: none; color: white;
+            font-size: 24px; cursor: pointer; box-shadow: var(--shadow-xl); z-index: var(--z-modal);
+            display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+        }
+        .chatbot-toggle:hover { transform: scale(1.1) rotate(10deg); }
+
+        @media (max-width: 768px) {
+            .stat-value { font-size: 36px; }
+            .grid-4 { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
 </head>
 <body>
-  
-  <header>
-    <h1>BARBIERI XROT 95 EVO</h1>
-    <div class="subtitle">• e-ManuAI • by • Dominik Schmied •</div>
-  </header>
 
-  <main>
-    <div id="moduleContainer"></div>
-  </main>
+    <div class="particles" id="particles"></div>
 
-  <script>
-    // AUTOMATICKÝ START APLIKACE (Žádný výběr, rovnou Dashboard)
-    async function startApp() {
-      const container = document.getElementById('moduleContainer');
-      container.innerHTML = '<div class="loader">INITIALIZING SYSTEM...</div>';
+    <div class="app-container glass-card">
+        
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+                    <div class="logo-text">
+                        <h1 style="font-size: 24px; font-weight: 800;">BARBIERI XROT 95</h1>
+                        <p style="opacity: 0.8; font-size: 13px;">E-MANUAI SYSTEM • EVO EDITION</p>
+                    </div>
+                </div>
+                
+                <div class="status-indicators">
+                    <div class="status-pill">
+                        <span class="status-pill-label">System</span>
+                        <span class="status-pill-value" style="color: #4ade80;">ONLINE</span>
+                    </div>
+                    <div class="status-pill">
+                        <span class="status-pill-label">Baterie</span>
+                        <span class="status-pill-value">98%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-      try {
-        <div class="timer-display">
-    <span id="span_1">00</span> : <span id="span_2">00</span> : <span id="span_3">00</span>
-</div>
-        // Cache buster pro vynucení nové verze
-        const mod = await import('./modules-xrot-autonomy.js?v=' + Date.now());
-        if (mod.init) {
-          await mod.init('XROT95', container);
-        } else {
-          throw new Error("Modul neobsahuje funkci init()");
-        }
-      } catch (e) {
-        console.error(e);
-        container.innerHTML = `
-          <div class="error-box">
-            <strong>CRITICAL SYSTEM FAILURE</strong><br><br>
-            ${e.message}<br>
-            Check console for stack trace.
-          </div>`;
-      }
-    }
+        <div class="nav-container">
+            <ul class="nav">
+                <li class="nav-item active"><i class="fa-solid fa-gauge-high"></i> Dashboard</li>
+                <li class="nav-item"><i class="fa-solid fa-map-location-dot"></i> Telemetrie</li>
+                <li class="nav-item"><i class="fa-solid fa-book-open"></i> E-Manuál</li>
+                <li class="nav-item"><i class="fa-solid fa-microchip"></i> AI Asistent</li>
+            </ul>
+        </div>
 
-    // Registrace Service Workeru
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+        <div class="content-wrapper">
+            
+            <h2 style="margin-bottom: 20px; color: var(--dark-secondary);">Operační Čas</h2>
+            
+            <div class="grid grid-4">
+                <div class="stat-card highlight">
+                    <span id="span_1" class="stat-value">00</span>
+                    <span class="stat-label">Minuty</span>
+                </div>
+                <div class="stat-card highlight">
+                    <span id="span_2" class="stat-value">00</span>
+                    <span class="stat-label">Sekundy</span>
+                </div>
+                <div class="stat-card">
+                    <span id="span_3" class="stat-value">00</span>
+                    <span class="stat-label">Setiny</span>
+                </div>
+                <div class="stat-card" style="display:none">
+                    <span id="span_4">00</span> 
+                </div>
+            </div>
 
-    // Spuštění
-    startApp();
-  </script>
-<script src="js/app.js"></script>
+            <div class="control-panel">
+                <button id="btn_start" class="btn btn-primary">
+                    <i class="fa-solid fa-play"></i> START
+                </button>
+                <button id="btn_stop" class="btn btn-danger">
+                    <i class="fa-solid fa-pause"></i> STOP
+                </button>
+                <button id="btn_reset" class="btn btn-warning">
+                    <i class="fa-solid fa-rotate-right"></i> RESET
+                </button>
+            </div>
 
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 15px; font-size: 18px;">Stav Senzorů (Gyroskop)</h3>
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between;">
+                        <span>Náklon X</span>
+                        <span id="gyro_data">0°</span>
+                    </div>
+                    <div style="height: 10px; background: var(--light); border-radius: 5px; overflow: hidden;">
+                        <div style="width: 45%; height: 100%; background: var(--secondary);"></div>
+                    </div>
+                </div>
+            </div>
+
+             <div style="margin-top: 20px; text-align: center;">
+                 <div id="camera_feed" style="background: #000; height: 200px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #333;">
+                     <i class="fa-solid fa-camera-slash" style="font-size: 40px;"></i>
+                     <p style="margin-top: 10px; color: #666;">Kamera Vypnuta</p>
+                 </div>
+             </div>
+
+        </div>
+    </div>
+
+    <button class="chatbot-toggle">
+        <i class="fa-solid fa-robot"></i>
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('particles');
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = Math.random() * 100 + 'vw';
+                p.style.top = Math.random() * 100 + 'vh';
+                p.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                p.style.width = (Math.random() * 5 + 2) + 'px';
+                p.style.height = p.style.width;
+                container.appendChild(p);
+            }
+        });
+    </script>
+
+    <script src="js/app.js"></script>
 </body>
 </html>
